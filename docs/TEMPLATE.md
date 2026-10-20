@@ -40,8 +40,9 @@ artifact on top of the shape described here.
   an instance hook directory (`develop.d/`, `post-create.d/`); see
   `scripts/README.md` and "Instance extension points" below.
 - `Makefile` — the release contract `release.yml` drives
-  (`build`/`sbom`/`release-assets`/`publish`), each a documented no-op
-  here — see "Release: a Makefile contract" below.
+  (`build`/`sbom`/`release-assets`/`publish`); here it packages the crate
+  — see "Release: a Makefile contract" and "Rust crate template notes"
+  below.
 - `.pre-commit-config.yaml` — git hooks, run by `prek` or `pre-commit`;
   language-agnostic hooks only.
 - `CLAUDE.md` — the AI-assisted coding workflow Claude Code follows in
@@ -222,6 +223,92 @@ unpinned apt package, and stays on `PATH` afterward. Node.js exists
 because `npx` (the `clear-thought` MCP server in `.mcp.json`) needs it.
 An instance that adds Python or Node.js as its own application runtime
 can reuse these directly rather than installing a second copy.
+
+## Rust crate template notes
+
+`template-rust-crate` extends `template-base` for a publishable library
+crate. The sections above still apply; these are the crate-specific
+additions.
+
+- **Crate scaffold (instance-owned).** `Cargo.toml`, `Cargo.lock`, `src/`,
+  `tests/` and `deny.toml` are `ignore` tier. A crate renames itself to
+  `craftainer-<name>` (the root `README.md` lists every place the name
+  appears, including the `use template_rust_crate::…` paths in `tests/` and
+  the doctest in `src/lib.rs`) and owns its dependencies, code, tests and
+  license/advisory policy. Dependency versions are kept fresh by Renovate
+  (`cargo` manager), not by sync.
+- **Template-owned tooling (`replace`).** The `Makefile`,
+  `scripts/release-*`, `scripts/develop.d/10-rust.sh`,
+  `scripts/post-create.d/10-cargo-fetch.sh`, `rust-toolchain.toml` and
+  `rustfmt.toml`. Don't edit them in a crate; change them here and release
+  a new tag. `.pre-commit-config.yaml`, `.gitignore`, `README.md` and the
+  docs are `merge` tier.
+- **Three pins move together.** The Rust version appears in
+  `scripts/develop.d/10-rust.sh` (`RUST_VERSION`, the devcontainer
+  toolchain), `rust-toolchain.toml` (`channel`, for anyone outside the
+  devcontainer) and `Cargo.toml` (`[workspace.package] rust-version`, as
+  `major.minor`). A mismatch makes the devcontainer and CI disagree on the
+  compiler. `.github/renovate.json` bumps all three in one grouped PR (the
+  "rust toolchain" group, not automerged); if you bump by hand, change all
+  three.
+- **Checks.** Run through `prek` like every other check:
+
+  | Hook | Command | Stage |
+  |---|---|---|
+  | `cargo-fmt` | `cargo fmt --all --check` | commit |
+  | `cargo-clippy` | `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` | commit |
+  | `cargo-lock-check` | `cargo metadata --locked` (a stale `Cargo.lock` fails) | push |
+  | `cargo-doc` | `cargo doc` with `RUSTDOCFLAGS=-Dwarnings` | push |
+  | `cargo-llvm-cov` | unit and integration tests, `--fail-under-lines 100` | push |
+  | `cargo-test-doc` | `cargo test --doc` (llvm-cov doesn't run doctests on stable) | push |
+  | `cargo-deny` | licenses, advisories, bans, sources (`deny.toml`) | push |
+  | `cargo-semver-checks` | API compatibility against the latest crates.io release | push |
+
+  `cargo-semver-checks` needs a published baseline. The hook asks the
+  crates.io sparse index for the root package's name (read from
+  `Cargo.toml`): HTTP 200 runs the check, 404 (a crate's first release, and
+  this template) skips with a message, anything else fails. An instance
+  with a virtual workspace edits the hook's `name` lookup. `prek ... --hook-stage manual` runs all of them.
+- **Build output and CARGO_HOME.** `target/` is in the repository
+  directory (a bind mount in the devcontainer, gitignored), so a large
+  build lands on the host disk; set `CARGO_TARGET_DIR` to a path inside the
+  container to keep it in the container's writable layer. `CARGO_HOME`
+  keeps its default (`~/.cargo`), also in the writable layer, so the
+  registry cache is rebuilt after a devcontainer rebuild
+  (`scripts/post-create.d/10-cargo-fetch.sh` refills it). The toolchain
+  itself (`~/.rustup`) is baked into the image.
+- **`deny.toml` warnings.** The license allow-list is longer than the
+  template's (empty) dependency graph needs, so `cargo deny` prints
+  "license was not encountered" warnings. They are expected and not
+  errors; prune the list once the crate's dependencies settle.
+- **Release.** The version lives only in the tag. `make build` stamps
+  `RELEASE_VERSION` into `Cargo.toml` (both `[package]` and
+  `[workspace.package]`) and `Cargo.lock` for the duration of the command
+  and restores them, then runs `cargo package --locked` and copies the
+  `.crate` into `dist/`. `make sbom` runs Syft over the unpacked crate
+  (SPDX JSON). `make publish` skips unless `CARGO_PUBLISH` is non-empty;
+  with it, it authenticates with the bootstrap `CARGO_REGISTRY_TOKEN` if
+  one is set (a crate's first release), otherwise by crates.io trusted
+  publishing (below). `make release-check` runs in the devcontainer: it
+  unpacks `dist/*.crate`, runs its doctests and builds a throwaway binary
+  crate that depends on it by path; with `CARGO_PUBLISH` set it also polls
+  the sparse index for the new version and builds a crate that depends on
+  `=<version>` from crates.io. A version that never appears (index lag)
+  ends in a notice and a pass, not a failure.
+- **Trusted publishing from `make`.** `release.yml` is base-owned and can't
+  add the `rust-lang/crates-io-auth-action` step, so `scripts/release-publish.sh`
+  does what that action does: request a GitHub OIDC token for audience
+  `crates.io` (`ACTIONS_ID_TOKEN_REQUEST_URL` + `&audience=crates.io`,
+  Bearer `ACTIONS_ID_TOKEN_REQUEST_TOKEN`; present because the build job
+  has `id-token: write`), `POST https://crates.io/api/v1/trusted_publishing/tokens`
+  with `{"jwt": ...}` for a token valid 30 minutes, publish with it as
+  `CARGO_REGISTRY_TOKEN`, and `DELETE` the same URL (Bearer token) to
+  revoke it. Tokens are masked in the log and never put on a command line.
+  `RELEASE_DRY_RUN=1 CARGO_PUBLISH=1 make publish` prints which path is
+  chosen and every step without any network call or publish.
+- **Runner toolchain.** `build` and `publish` run on the bare runner, not in
+  the devcontainer: the runner's `rustup` installs the pinned toolchain from
+  `rust-toolchain.toml` (`rustup toolchain install`), and `docker` runs Syft.
 
 ## Code style
 

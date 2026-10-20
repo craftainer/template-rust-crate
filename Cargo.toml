@@ -29,7 +29,11 @@ description = "Template repository for publishable Rust crates"
 readme = "README.md"
 # Stays 0.0.0 in git: the release tag is the real version. `publish` is left
 # at Cargo's default (true) and gated by the release contract's
-# CARGO_PUBLISH switch, not here.
+# CARGO_PUBLISH switch, not here. crates.io also wants `keywords` (max 5) and
+# `categories` (https://crates.io/category_slugs); an instance adds them.
+# Only what a dependent needs goes into the .crate (the default would ship
+# .devcontainer/, docs/, scripts/ and more).
+include = ["/src/", "/tests/", "/README.md", "/LICENSE"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

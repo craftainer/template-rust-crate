@@ -21,6 +21,12 @@
       "automerge": false
     },
     {
+      "description": "The Rust version is pinned in scripts/develop.d/10-rust.sh, rust-toolchain.toml (Renovate's built-in rust-toolchain manager) and Cargo.toml's rust-version (major.minor), and all three must move together: one group, out of the automerged one, for manual review.",
+      "matchDepNames": ["rust"],
+      "groupName": "rust toolchain",
+      "automerge": false
+    },
+    {
       "description": "Renovate can't regenerate .devcontainer/devcontainer-lock.json, so features are bumped by hand together with it (see .devcontainer/README.md).",
       "matchManagers": ["devcontainer"],
       "matchDepTypes": ["feature"],
@@ -56,6 +62,15 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s*\\n\\s*(?:runs-on|runner): \\$\\{\\{ vars\\.[A-Z0-9_]+ \\|\\| '(?<currentValue>[^']+)' \\}\\}"
       ]
+    },
+    {
+      "description": "Cargo.toml's rust-version is the toolchain's major.minor.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Cargo\\.toml$/"],
+      "matchStrings": ["rust-version = \"(?<currentValue>\\d+\\.\\d+)\""],
+      "depNameTemplate": "rust",
+      "datasourceTemplate": "docker",
+      "autoReplaceStringTemplate": "rust-version = \"{{{newMajor}}}.{{{newMinor}}}\""
     }
   ]
 }

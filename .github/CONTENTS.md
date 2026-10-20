@@ -17,7 +17,10 @@
   its app runtime it's a runtime upgrade (its runtime `Dockerfile` must
   match, and its tools must support the new version). Devcontainer
   features are left out: Renovate can't regenerate their lockfile, so
-  they're bumped by hand (see `../.devcontainer/README.md`).
+  they're bumped by hand (see `../.devcontainer/README.md`). The Rust
+  version pinned in `scripts/develop.d/10-rust.sh`, `rust-toolchain.toml`
+  and Cargo.toml's `rust-version` is one "rust toolchain" group that moves
+  all three together and is not automerged.
 - `ISSUE_TEMPLATE/` — issue forms (bug report, feature request) shown
   when opening a new issue.
 - `PULL_REQUEST_TEMPLATE.md` — prefills the description box for new PRs.

@@ -87,15 +87,19 @@ replace:
   - scripts/post-create.d/10-cargo-fetch.sh
   - rust-toolchain.toml
   - rustfmt.toml
+  # The release contract (see docs/TEMPLATE.md): the Makefile and its
+  # helpers carry no per-crate content (the name and version come from
+  # Cargo.toml), so fixes reach every crate through a sync, as in
+  # template-python-package. Listed one by one for the same reason as above.
+  - Makefile
+  - scripts/release-check.sh
+  - scripts/release-publish.sh
+  - scripts/release-stamp-version.py
+  - scripts/release-stamped.sh
 
 ignore:
   # Each instance chooses its own license and copyright holder.
   - LICENSE
-
-  # The release-artifact contract (see docs/TEMPLATE.md's "Release: a
-  # Makefile contract" section) is the whole point that this differs per
-  # instance -- template-owned in shape only, never in content.
-  - Makefile
 
   # Product/domain knowledge and working plans: instance-owned from the
   # moment it's instantiated.
