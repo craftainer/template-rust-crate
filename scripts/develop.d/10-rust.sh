@@ -51,7 +51,7 @@ chmod +x "${tmpdir}/rustup-init"
 sudo -u vscode env HOME=/home/vscode "${tmpdir}/rustup-init" -y \
     --default-toolchain "$RUST_VERSION" --profile minimal \
     -c clippy -c rustfmt -c llvm-tools-preview --no-modify-path
-for bin in rustup cargo rustc rustfmt cargo-clippy clippy-driver rustdoc; do
+for bin in rustup cargo rustc rustfmt cargo-fmt cargo-clippy clippy-driver rustdoc; do
     ln -sf "/home/vscode/.cargo/bin/${bin}" "/usr/local/bin/${bin}"
 done
 
