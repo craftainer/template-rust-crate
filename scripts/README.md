@@ -8,6 +8,14 @@
   either.
 - `post-create.sh` — the devcontainer's `postCreateCommand`: git
   `safe.directory`, `prek install`, then every `post-create.d/*.sh`.
+- `release-check.sh`, `release-publish.sh`, `release-stamped.sh`,
+  `release-stamp-version.py` — the `Makefile`'s release contract
+  (`docs/TEMPLATE.md`, "Rust crate template notes"): `release-check.sh`
+  smoke-tests the packaged and published crate, `release-publish.sh` runs
+  `cargo publish` with a bootstrap token or crates.io trusted publishing,
+  `release-stamped.sh` runs a command with `RELEASE_VERSION` stamped into
+  `Cargo.toml`/`Cargo.lock` (restored afterwards) using
+  `release-stamp-version.py`.
 - `develop.d/`, `post-create.d/` — instance hook directories, empty apart
   from their own `README.md`; see `docs/TEMPLATE.md`'s "Instance extension
   points".

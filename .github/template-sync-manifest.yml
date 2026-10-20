@@ -10,10 +10,9 @@
 # wants a template-owned path gone for good should move its pattern to
 # "ignore" in a template release rather than deleting the file locally.
 #
-# This is template-base's own manifest, classifying the generic subset it
-# ships, and it is itself "merge" tier: a repo that's both an instance of
-# template-base and its own template for further instances (e.g.
-# template-fastapi) edits this file directly, covering its own (larger)
+# This started as template-base's own manifest and is itself "merge" tier:
+# template-rust-crate is both an instance of template-base and its own
+# template for further instances, so it edits this file directly, covering its own (larger)
 # tracked-file set, and resolves base's additions by hand -- see that repo's
 # docs/TEMPLATE.md.
 #
@@ -78,14 +77,29 @@ replace:
   - docs/plans/README.md
   - docs/plans/template.md
 
+  # template-rust-crate's own layer on top of base: the toolchain and gate-tool
+  # installer and the post-create fetch. Both are instance-agnostic, so fixes
+  # reach every crate through a sync. Listed one by one, not as base's `*.sh`
+  # globs: an instance's own extra hook scripts go in its
+  # template-sync-manifest.local.yml. The pinned toolchain file is shared for
+  # the same reason: it must match the pin in 10-rust.sh.
+  - scripts/develop.d/10-rust.sh
+  - scripts/post-create.d/10-cargo-fetch.sh
+  - rust-toolchain.toml
+  - rustfmt.toml
+  # The release contract (see docs/TEMPLATE.md): the Makefile and its
+  # helpers carry no per-crate content (the name and version come from
+  # Cargo.toml), so fixes reach every crate through a sync, as in
+  # template-python-package. Listed one by one for the same reason as above.
+  - Makefile
+  - scripts/release-check.sh
+  - scripts/release-publish.sh
+  - scripts/release-stamp-version.py
+  - scripts/release-stamped.sh
+
 ignore:
   # Each instance chooses its own license and copyright holder.
   - LICENSE
-
-  # The release-artifact contract (see docs/TEMPLATE.md's "Release: a
-  # Makefile contract" section) is the whole point that this differs per
-  # instance -- template-owned in shape only, never in content.
-  - Makefile
 
   # Product/domain knowledge and working plans: instance-owned from the
   # moment it's instantiated.
@@ -105,8 +119,21 @@ ignore:
   # points"): an instance's own compose fragment and the scripts it drops
   # into the two hook directories.
   - .devcontainer/compose.instance.yml
-  - scripts/develop.d/*.sh
-  - scripts/post-create.d/*.sh
+  # (develop.d/*.sh and post-create.d/*.sh are not globbed here: this
+  # template ships a script in each, classified `replace` above.)
+
+  # The crate scaffold: an instance renames the package, owns its
+  # dependencies, code, tests and license/advisory policy, so none of it can
+  # be synced.
+  - Cargo.toml
+  - src/
+  - tests/
+  - deny.toml
+
+  # Derived from Cargo.toml; a 3-way merge of a lock file is unreliable, and
+  # the dependency set is the instance's own, so an instance regenerates it
+  # with `cargo update`/`cargo generate-lockfile`.
+  - Cargo.lock
 
   # An instance's own extra "ignore" patterns for paths this manifest can't
   # know about (see docs/TEMPLATE.md's "Template sync" section).

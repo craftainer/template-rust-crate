@@ -65,3 +65,91 @@ repos:
         files: ^\.devcontainer/devcontainer(-lock)?\.json$
         pass_filenames: false
         stages: [pre-commit, manual]
+
+  # The Rust gates. Tools come from the pinned toolchain
+  # (rust-toolchain.toml, scripts/develop.d/10-rust.sh); tool flags were
+  # checked against each tool's docs (cargo-llvm-cov /taiki-e/cargo-llvm-cov,
+  # cargo-deny /embarkstudios/cargo-deny, cargo-semver-checks
+  # /obi1kenobi/cargo-semver-checks on context7).
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt --check
+        entry: cargo fmt --all --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, manual]
+
+      - id: cargo-clippy
+        name: cargo clippy -D warnings
+        entry: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, manual]
+
+      - id: cargo-lock-check
+        name: Cargo.lock is up to date
+        # --locked fails instead of rewriting a stale Cargo.lock.
+        entry: cargo metadata --locked --format-version 1 --no-deps --quiet
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: cargo-doc
+        name: cargo doc (rustdoc warnings are errors)
+        entry: env RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --no-deps --all-features --locked
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: cargo-llvm-cov
+        name: cargo llvm-cov (100% line-coverage gate)
+        # Runs the unit and integration tiers; tests/ itself
+        # is excluded from the measured lines by cargo-llvm-cov's defaults.
+        entry: cargo llvm-cov --workspace --all-features --locked --fail-under-lines 100
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: cargo-test-doc
+        name: cargo test --doc
+        # llvm-cov does not run doctests on stable.
+        entry: cargo test --workspace --all-features --locked --doc
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: cargo-deny
+        name: cargo deny check (licenses, advisories, bans, sources)
+        entry: cargo deny --locked check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: cargo-semver-checks
+        name: cargo semver-checks (only once a baseline is published)
+        # The baseline is the latest release on crates.io. A crate's first
+        # release (and this template) has none, so a 404 from the sparse
+        # index skips with a message; any other failure is an error. Reads
+        # the root package's name from Cargo.toml; an instance with a virtual
+        # workspace edits `name`.
+        entry: >-
+          bash -c 'name=$(python3 -c "import tomllib;print(tomllib.load(open(\"Cargo.toml\",\"rb\"))[\"package\"][\"name\"])");
+          case ${#name} in 1) p=1;; 2) p=2;; 3) p=3/${name:0:1};; *) p=${name:0:2}/${name:2:2};; esac;
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://index.crates.io/$p/$name") || code=000;
+          case $code in
+          200) exec cargo semver-checks --workspace;;
+          404) echo "semver-checks: no published baseline for $name on crates.io; skipping";;
+          *) echo "semver-checks: crates.io index returned HTTP $code" >&2; exit 1;;
+          esac' --
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]

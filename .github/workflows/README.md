@@ -248,6 +248,22 @@ the registry push) carry the same label set, computed once by
   it's one stable prefix per org across every repo/template instance
   that org owns, rather than a per-repo namespace to look up each time.
 
+## crates.io publishing
+
+`make publish` (see the root `README.md`) publishes with crates.io trusted
+publishing, so `release.yml` needs `id-token: write` on the job that runs
+it (template-base's `release.yml` grants it). Because `release.yml` is
+base-owned it can't run `rust-lang/crates-io-auth-action`; the
+OIDC-for-token exchange happens inside `make publish`
+(`scripts/release-publish.sh`, see `docs/TEMPLATE.md`).
+
+- `CARGO_PUBLISH` (variable) — unset or empty skips publishing; any other
+  value publishes to crates.io. Set it per repository: each crate
+  registers its own trusted publisher.
+- `CARGO_REGISTRY_TOKEN` (secret) — the first-release bootstrap token,
+  passed only to `make publish` and empty when unset (treated as absent).
+  Delete it once the crate's trusted publisher exists.
+
 ## Release variables and secrets
 
 `release.yml` passes these to the Makefile targets as environment
@@ -268,8 +284,8 @@ cleanly when the registry isn't configured.
   nothing broader (`template-sync.yml` also needs `pull-requests:
   write`, for nothing else); leave `checks.yml` at `contents: read`.
 - Keep `id-token: write` on `release.yml`'s `build` job only (the one
-  running `make publish`): PyPI trusted publishing via GitHub OIDC. It
-  is unused by repos that don't publish to PyPI.
+  running `make publish`): crates.io trusted publishing via GitHub OIDC. It
+  is unused by repos that don't publish to crates.io.
 
 ## Don't
 
