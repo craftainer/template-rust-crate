@@ -109,3 +109,10 @@ $RECYCLE.BIN/
 # Claude Code CLI: personal, per-user overrides — never the shared
 # .claude/settings.json.
 .claude/settings.local.json
+
+### Rust ###
+# Build output (also cargo-llvm-cov's report dir). Cargo.lock IS committed:
+# Cargo's guidance no longer says to ignore it for libraries, and it pins
+# the exact graph that cargo-deny and CI check
+# (https://doc.rust-lang.org/cargo/faq.html#why-have-cargolock-in-version-control).
+target/
