@@ -92,6 +92,8 @@ replace:
   # Cargo.toml), so fixes reach every crate through a sync, as in
   # template-python-package. Listed one by one for the same reason as above.
   - Makefile
+  - scripts/crate_info.py
+  - scripts/test_crate_info.py
   - scripts/release-check.sh
   - scripts/release-publish.sh
   - scripts/release-stamp-version.py

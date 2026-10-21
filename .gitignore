@@ -116,3 +116,6 @@ $RECYCLE.BIN/
 # the exact graph that cargo-deny and CI check
 # (https://doc.rust-lang.org/cargo/faq.html#why-have-cargolock-in-version-control).
 target/
+
+# Bytecode of the release helper scripts (scripts/*.py).
+__pycache__/

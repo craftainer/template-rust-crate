@@ -135,8 +135,8 @@ unchanged across every instance), then drives these targets:
 | Target | Runs | Where | Env available |
 |---|---|---|---|
 | `release-arches` | once, first | host runner | none; must print a JSON array on stdout, e.g. `["amd64"]` |
-| `build`, `sbom`, `release-assets`, `publish` | once **per arch**, in that order | host runner for that arch | `RELEASE_VERSION`, `RELEASE_TAG`, `RELEASE_ARCH`, `OCI_REGISTRY`, `OCI_IMAGE_NAME`, `OCI_REGISTRY_USERNAME`, `OCI_REGISTRY_PASSWORD`, all `GITHUB_*` |
-| `release-check` | once, after all arches | **inside the devcontainer** (`devcontainers/ci`), stack up | `RELEASE_VERSION`, `RELEASE_TAG` |
+| `build`, `sbom`, `release-assets`, `publish` | once **per arch**, in that order | host runner for that arch | `RELEASE_VERSION`, `RELEASE_TAG`, `RELEASE_ARCH`, `OCI_REGISTRY`, `OCI_IMAGE_NAME`, `OCI_REGISTRY_USERNAME`, `OCI_REGISTRY_PASSWORD`, `PYPI_PUBLISH`, `NPM_PUBLISH`, `CARGO_PUBLISH`, all `GITHUB_*`; on `publish` only, `NPM_TOKEN` and `CARGO_REGISTRY_TOKEN` (bootstrap secrets; empty when unset, so treat empty as absent) |
+| `release-check` | once, after all arches | **inside the devcontainer** (`devcontainers/ci`), stack up | `RELEASE_VERSION`, `RELEASE_TAG`, `PYPI_PUBLISH`, `NPM_PUBLISH`, `CARGO_PUBLISH` |
 | `finalize` | once, after `release-check` | host runner | same as per-arch minus `RELEASE_ARCH` |
 
 What each target is for: `build` produces the release artifact(s) (an
@@ -268,7 +268,14 @@ additions.
   crates.io sparse index for the root package's name (read from
   `Cargo.toml`): HTTP 200 runs the check, 404 (a crate's first release, and
   this template) skips with a message, anything else fails. An instance
-  with a virtual workspace edits the hook's `name` lookup. `prek ... --hook-stage manual` runs all of them.
+  with a virtual workspace sets `CRATE` (the name and index URL come from
+  `scripts/crate_info.py`, which the Makefile and release scripts share).
+  The hook passes `--release-type "${SEMVER_RELEASE_TYPE:-minor}"`: the
+  in-git version is a permanent `0.0.0`, so without it cargo-semver-checks
+  would infer the bump from the version number. A maintainer planning a
+  breaking release runs the hook with `SEMVER_RELEASE_TYPE=major`; use
+  `patch` for a release that must not add API. `prek ... --hook-stage manual`
+  runs all of them.
 - **Build output and CARGO_HOME.** `target/` is in the repository
   directory (a bind mount in the devcontainer, gitignored), so a large
   build lands on the host disk; set `CARGO_TARGET_DIR` to a path inside the
@@ -294,7 +301,13 @@ additions.
   crate that depends on it by path; with `CARGO_PUBLISH` set it also polls
   the sparse index for the new version and builds a crate that depends on
   `=<version>` from crates.io. A version that never appears (index lag)
-  ends in a notice and a pass, not a failure.
+  ends in a notice and a pass, not a failure. `make build` finds the
+  `.crate` through `cargo metadata`'s `target_directory`, so a
+  `CARGO_TARGET_DIR` (or `build.target-dir`) outside the repo works.
+  `make publish` is idempotent: a version already in the sparse index is
+  skipped with a notice, so re-running a failed release job completes it.
+  For a virtual workspace set `CARGO_PACKAGE` (both `build` and `publish`
+  then pass `-p`).
 - **Trusted publishing from `make`.** `release.yml` is base-owned and can't
   add the `rust-lang/crates-io-auth-action` step, so `scripts/release-publish.sh`
   does what that action does: request a GitHub OIDC token for audience

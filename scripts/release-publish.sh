@@ -7,8 +7,14 @@
 # Reads: CARGO_REGISTRY_TOKEN (the first-release bootstrap token; empty counts
 # as absent), ACTIONS_ID_TOKEN_REQUEST_URL / _TOKEN (GitHub's OIDC endpoint,
 # present when the job has `id-token: write`), CRATES_IO_URL (default
-# https://crates.io), RELEASE_DRY_RUN (non-empty: print the chosen path and
-# every step without any network call or publish).
+# https://crates.io), CRATES_INDEX_URL (sparse index, default
+# https://index.crates.io), CRATE / CARGO_PACKAGE (see crate_info.py),
+# RELEASE_DRY_RUN (non-empty: print the chosen path and every step; the only
+# network call is the read-only index lookup, and nothing is published).
+#
+# Idempotent: a version already in the sparse index with the same checksum as
+# dist/<crate>-<version>.crate is skipped, so re-running a failed release job
+# can complete; a listed version with other contents fails.
 #
 # Trusted publishing is what rust-lang/crates-io-auth-action does, minus the
 # action (release.yml is base-owned): ask GitHub for an OIDC token with
@@ -24,14 +30,52 @@ audience=${audience#https://}
 endpoint="$url/api/v1/trusted_publishing/tokens"
 dry=${RELEASE_DRY_RUN:-}
 
+cd "$(dirname "$0")/.."
+name=$(python3 -I scripts/crate_info.py name)
+version=$(python3 -I scripts/crate_info.py version)
+package_args=()
+if [[ -n ${CARGO_PACKAGE:-} ]]; then
+    package_args=(-p "$CARGO_PACKAGE")
+fi
+
+# Idempotence: has the index got this exact version? 0 = listed, 1 = not
+# listed, 2 = the index failed or answered garbage (fail: publishing blind
+# could mask a duplicate).
+status=0
+cksum=$(python3 -I scripts/crate_info.py checksum "$version") || status=$?
+case $status in
+    0)
+        # Listed (a yanked version counts: crates.io never accepts it again).
+        # Only skip when it is *our* crate; the index's cksum is the sha256 of
+        # the .crate that was uploaded.
+        crate_file="dist/$name-$version.crate"
+        if [[ ! -f $crate_file ]]; then
+            echo "$name $version is already on crates.io but $crate_file is missing, so its contents can't be compared (run make build)" >&2
+            exit 1
+        fi
+        local_sum=$(sha256sum "$crate_file" | cut -d' ' -f1)
+        if [[ $local_sum == "$cksum" ]]; then
+            echo "NOTICE: $name $version is already on crates.io with identical contents; nothing to publish."
+            exit 0
+        fi
+        echo "$name $version is already published with different contents (index sha256 $cksum, $crate_file $local_sum)" >&2
+        exit 1
+        ;;
+    1) ;;
+    *)
+        echo "could not read the crates.io index for $name; not publishing blind" >&2
+        exit 1
+        ;;
+esac
+
 publish() {
     # CARGO_REGISTRY_TOKEN is read by cargo from the environment, so the
     # token never appears on a command line. --allow-dirty: release-stamped.sh
     # has edited Cargo.toml and Cargo.lock.
     if [[ -n $dry ]]; then
-        echo "[dry run] would: cargo publish --locked --allow-dirty"
+        echo "[dry run] would: cargo publish --locked --allow-dirty ${package_args[*]+"${package_args[*]}"}"
     else
-        cargo publish --locked --allow-dirty
+        cargo publish --locked --allow-dirty ${package_args[@]+"${package_args[@]}"}
     fi
 }
 
