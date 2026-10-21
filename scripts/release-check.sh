@@ -4,15 +4,15 @@
 # is on.
 #
 # Reads: CARGO_PUBLISH (non-empty: also check crates.io), RELEASE_VERSION
-# (the version to look for there), CRATES_INDEX_URL (default
-# https://index.crates.io), RELEASE_CHECK_ATTEMPTS / RELEASE_CHECK_DELAY
-# (retry tuning for index propagation, defaults 10 and 15 seconds, doubling up
+# (the version to look for there), CRATE / CARGO_PACKAGE (see crate_info.py),
+# CRATES_INDEX_URL (default https://index.crates.io), RELEASE_CHECK_ATTEMPTS /
+# RELEASE_CHECK_DELAY (retry tuning for index propagation, defaults 10 and 15 seconds, doubling up
 # to 120). A release that never shows up passes with a notice, not a failure.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-name=${CRATE:-$(python3 -I -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["name"])')}
+name=$(python3 -I scripts/crate_info.py name)
 # The lib target name: hyphens become underscores unless [lib] name says otherwise.
 module=${name//-/_}
 tmp=$(mktemp -d)
@@ -63,27 +63,12 @@ if [[ -z ${RELEASE_VERSION:-} ]]; then
     exit 1
 fi
 
-# Sparse index path: 1/ and 2/ for short names, 3/<c>/ for three, else <2>/<2>/.
-case ${#name} in
-    1) shard=1 ;;
-    2) shard=2 ;;
-    3) shard=3/${name:0:1} ;;
-    *) shard=${name:0:2}/${name:2:2} ;;
-esac
-index_url="${CRATES_INDEX_URL:-https://index.crates.io}/$shard/${name,,}"
-
 echo "== published $name $RELEASE_VERSION on crates.io"
 attempts=${RELEASE_CHECK_ATTEMPTS:-10}
 delay=${RELEASE_CHECK_DELAY:-15}
 for ((i = 1; i <= attempts; i++)); do
-    # One JSON object per line; a yanked version doesn't count.
-    if curl -fsS "$index_url" 2>/dev/null | python3 -I -c '
-import json, sys
-for line in sys.stdin:
-    entry = json.loads(line)
-    if entry["vers"] == sys.argv[1] and not entry["yanked"]:
-        sys.exit(0)
-sys.exit(1)' "$RELEASE_VERSION"; then
+    # A yanked version doesn't count.
+    if python3 -I scripts/crate_info.py has-version "$RELEASE_VERSION" --not-yanked; then
         probe "$tmp/published-probe" "\"=$RELEASE_VERSION\""
         echo "OK: $name =$RELEASE_VERSION builds from crates.io"
         exit 0

@@ -8,6 +8,10 @@
   either.
 - `post-create.sh` — the devcontainer's `postCreateCommand`: git
   `safe.directory`, `prek install`, then every `post-create.d/*.sh`.
+- `crate_info.py` (+ `test_crate_info.py`, run by a hook) — the one place that
+  reads the crate name and version from `Cargo.toml` and computes a crate's
+  crates.io sparse-index URL and published versions; the Makefile, the
+  release scripts and the semver-checks hook call it.
 - `release-check.sh`, `release-publish.sh`, `release-stamped.sh`,
   `release-stamp-version.py` — the `Makefile`'s release contract
   (`docs/TEMPLATE.md`, "Rust crate template notes"): `release-check.sh`
