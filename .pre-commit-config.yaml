@@ -150,9 +150,9 @@ repos:
         # planning a breaking release sets SEMVER_RELEASE_TYPE=major, a
         # patch-only one `patch`.
         entry: >-
-          bash -c 'url=$(python3 -I scripts/crate_info.py index-url);
-          name=$(python3 -I scripts/crate_info.py name);
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$url") || code=000;
+          bash -c 'info=$(python3 -I scripts/crate_info.py index-info) || exit 1;
+          read -r name url <<<"$info";
+          code=$(curl -sS -o /dev/null -w "%{http_code}" "$url") || { echo "semver-checks: could not reach $url (curl exit $?)" >&2; exit 1; };
           case $code in
           200) exec cargo semver-checks --workspace --release-type "${SEMVER_RELEASE_TYPE:-minor}";;
           404) echo "semver-checks: no published baseline for $name on crates.io; skipping";;

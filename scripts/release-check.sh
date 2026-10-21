@@ -66,9 +66,13 @@ fi
 echo "== published $name $RELEASE_VERSION on crates.io"
 attempts=${RELEASE_CHECK_ATTEMPTS:-10}
 delay=${RELEASE_CHECK_DELAY:-15}
+status=1
 for ((i = 1; i <= attempts; i++)); do
-    # A yanked version doesn't count.
-    if python3 -I scripts/crate_info.py has-version "$RELEASE_VERSION" --not-yanked; then
+    # A yanked version doesn't count. 0 = listed, 1 = not (yet), 2 = the index
+    # failed or answered garbage: retried like 1, but fatal if it persists.
+    status=0
+    python3 -I scripts/crate_info.py has-version "$RELEASE_VERSION" --not-yanked || status=$?
+    if [[ $status -eq 0 ]]; then
         probe "$tmp/published-probe" "\"=$RELEASE_VERSION\""
         echo "OK: $name =$RELEASE_VERSION builds from crates.io"
         exit 0
@@ -79,5 +83,9 @@ for ((i = 1; i <= attempts; i++)); do
         delay=$((delay * 2 > 120 ? 120 : delay * 2))
     fi
 done
+if [[ $status -ne 1 ]]; then
+    echo "could not read the crates.io index for $name after $attempts attempts" >&2
+    exit 1
+fi
 echo "::warning::$name $RELEASE_VERSION was not on crates.io after $attempts attempts; the published-release check was skipped"
 echo "NOTICE: $name $RELEASE_VERSION is not on crates.io (index lag, or publishing was skipped); only the local crate was verified."
