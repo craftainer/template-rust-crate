@@ -28,7 +28,8 @@ through GitHub's OIDC identity instead. Two constraints shape how:
 - `template-base`'s `release.yml` is base-owned (template sync overwrites
   it), so this template can't add the step crates.io's documentation shows,
   `rust-lang/crates-io-auth-action`. `release.yml` does grant
-  `id-token: write` to the build job, which runs `make publish`.
+  `id-token: write` only to its `publish-packages` job (since base 1.9.0),
+  which runs `make publish-packages`.
 
 ## Decision
 
@@ -49,8 +50,9 @@ from it. It contains:
   only home of the version), `sbom` runs Syft over the unpacked crate,
   `release-arches` is `["amd64"]`, and `release-assets` is the `.crate` and
   the SBOM;
-- `make publish`, enabled by the `CARGO_PUBLISH` repository variable and
-  skipped when it is empty. With a non-empty `CARGO_REGISTRY_TOKEN` (the
+- `make publish-packages` (once, after every arch leg; `make publish` is
+  image-only, so a no-op), enabled by the `CARGO_PUBLISH` repository variable
+  and skipped, with a warning, when it is empty. With a non-empty `CARGO_REGISTRY_TOKEN` (the
   first-release bootstrap secret) it publishes with that token. Otherwise
   it performs the trusted-publishing exchange itself, in
   `scripts/release-publish.sh`, copying what `crates-io-auth-action` does:
