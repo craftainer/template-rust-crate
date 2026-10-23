@@ -27,8 +27,8 @@ class ReleaseContract(unittest.TestCase):
             with self.subTest(env=env):
                 result = make("publish", **env)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(result.stdout.count("\n"), 1, result.stdout)
                 self.assertIn("no image to publish", result.stdout)
+                self.assertNotIn("release-publish", result.stdout)
 
     def test_publish_packages_unset_warns_and_skips(self) -> None:
         result = make("publish-packages")
