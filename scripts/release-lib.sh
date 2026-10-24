@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared by release-check.sh (the local crate) and release-verify-published.sh
 # (the published release); sourced, not run.
 
