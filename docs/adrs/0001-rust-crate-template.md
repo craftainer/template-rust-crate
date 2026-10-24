@@ -62,10 +62,11 @@ from it. It contains:
   revoke it. A first release therefore needs a short-lived, crate-scoped
   token; the owner then registers the trusted publisher on crates.io and
   deletes the token;
-- `make release-check` (devcontainer, after publish): unpack the `.crate`,
-  run its doctests and build a throwaway binary crate depending on it by
-  path; with `CARGO_PUBLISH` set, poll the sparse index for the version and
-  build a throwaway crate depending on `=<version>` from crates.io. A
+- `make release-check` (devcontainer, before the release): unpack the
+  `.crate`, run its doctests and build a throwaway binary crate depending on
+  it by path. `make verify-published` (bare runner, after `publish-packages`)
+  with `CARGO_PUBLISH` set polls the sparse index for the version and
+  builds a throwaway crate depending on `=<version>` from crates.io. A
   version that doesn't appear within the bounded retry is a notice, not a
   failure;
 - the GPL-3.0 license, matching the other templates and the applications
@@ -89,7 +90,7 @@ from it. It contains:
 - Packaging and publishing run on the bare runner, which needs `rustup` (it
   installs the toolchain from `rust-toolchain.toml`), Python 3, `curl` and
   Docker (Syft). They are present on GitHub-hosted Ubuntu runners.
-- `release-check` can't prove the registry copy when the index is slow: it
+- `verify-published` can't prove the registry copy when the index is slow: it
   passes with a notice after the retry window, so a broken upload that never
   appears is visible only as that notice in the log.
 - The dependency graph is the instance's: template-side bumps of
