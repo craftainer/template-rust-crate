@@ -481,7 +481,9 @@ additions.
   path. `make verify-published` (after `publish-packages`, only when a
   `*_PUBLISH` variable is set, on the bare runner with no secrets) polls the
   sparse index for the new version when `CARGO_PUBLISH` is set and builds a
-  crate that depends on `=<version>` from crates.io. A version that never
+  crate that depends on `=<version>` from crates.io, built from a temp dir
+  outside the repo (the repo's `.cargo/config.toml` cannot apply; the
+  toolchain is taken from `rust-toolchain.toml` explicitly). A version that never
   appears (index lag) ends in a notice and a pass, not a failure. `make build` finds the
   `.crate` through `cargo metadata`'s `target_directory`, so a
   `CARGO_TARGET_DIR` (or `build.target-dir`) outside the repo works.
