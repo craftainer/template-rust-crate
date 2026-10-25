@@ -7,9 +7,11 @@
   copying its shape into a second script. Prefer the hook below over
   either. Every download goes through its `fetch` helper (bounded curl
   retries with backoff; GitHub URLs authenticated when the optional
-  `github_token` BuildKit secret is present) and the installers that
-  download for themselves through `retry`, so CI's shared-IP HTTP 429s
-  don't fail the image build. Local builds need no token.
+  `github_token` BuildKit secret is present) and the installers
+  that download for themselves run through `retry` (the installer script
+  itself is fetched once, by `fetch`, so the two layers of retries do not
+  multiply; a failed download names the installer and URL before the script
+  aborts), so CI's shared-IP HTTP 429s don't fail the image build. Local builds need no token.
 - `post-create.sh` — the devcontainer's `postCreateCommand`: git
   `safe.directory`, `prek install`, then every `post-create.d/*.sh`.
 - `crate_info.py` (+ `test_crate_info.py`, run by a hook; `test_release_contract.py` covers the Makefile's `publish` / `publish-packages` split and the `verify-published` probe's isolation) — the one place that
