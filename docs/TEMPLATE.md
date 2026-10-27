@@ -475,6 +475,24 @@ additions.
   compiler. `.github/renovate.json` bumps all three in one grouped PR (the
   "rust toolchain" group, not automerged); if you bump by hand, change all
   three.
+- **Dependencies are caret ranges, not exact pins.** This overrides the
+  exact-pin rule above for what a published library declares in
+  `Cargo.toml` (`[dependencies]` and `[dev-dependencies]`): write
+  `thiserror = "2.0.21"` (Cargo reads that as `^2.0.21`), never
+  `=2.0.21`. An exact pin in a library cannot be unified with an app's or
+  another library's requirement on the same crate, so the dependent's
+  build fails; the `^` floor states the oldest release the crate is
+  known to work with
+  ([Cargo: specifying dependencies](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)).
+  `Cargo.lock` is still committed (see `.gitignore`), so CI and the
+  devcontainer build the exact versions the lock records; it is not
+  published and does not constrain dependents. An application built from
+  a crate template keeps exact `=` pins plus its `Cargo.lock`. Renovate's
+  `cargo` manager runs with `rangeStrategy: update-lockfile`
+  (`.github/renovate.json`): in-range updates change only `Cargo.lock`,
+  and the `Cargo.toml` range is rewritten only when a release falls
+  outside it (a new major). It does not raise the floor on every update
+  (`bump` would), which would needlessly narrow what dependents can use.
 - **Checks.** Run through `prek` like every other check:
 
   | Hook | Command | Stage |
