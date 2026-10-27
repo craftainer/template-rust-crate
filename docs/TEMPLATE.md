@@ -502,7 +502,15 @@ additions.
   in-git version is a permanent `0.0.0`, so without it cargo-semver-checks
   would infer the bump from the version number. A maintainer planning a
   breaking release runs the hook with `SEMVER_RELEASE_TYPE=major`; use
-  `patch` for a release that must not add API. `prek ... --hook-stage manual`
+  `patch` for a release that must not add API. In CI, `checks.yml` sets
+  `major` itself when the change is marked breaking with the Conventional
+  Commits `!` marker (`feat(bulk)!: ...`, `fix!: ...`): it reads the PR title
+  on `pull_request` events and the head commit's subject line on pushes to
+  `main` (a squash merge carries the PR title, so `main` stays green between
+  a breaking merge and its release). Any other change, event or a
+  `BREAKING CHANGE:` footer alone runs as `minor`. The decision lives in
+  `.github/scripts/semver_release_type.py`, which receives the untrusted
+  title through the environment only. `prek ... --hook-stage manual`
   runs all of them.
 - **Build output and CARGO_HOME.** `target/` is in the repository
   directory (a bind mount in the devcontainer, gitignored), so a large
