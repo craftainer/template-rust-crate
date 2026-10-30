@@ -74,7 +74,6 @@ repos:
         pass_filenames: false
         stages: [pre-commit, manual]
 
-<<<<<<< /home/runner/work/template-rust-crate/template-rust-crate/.pre-commit-config.yaml
   # The Rust gates. Tools come from the pinned toolchain
   # (rust-toolchain.toml, scripts/develop.d/10-rust.sh); tool flags were
   # checked against each tool's docs (cargo-llvm-cov /taiki-e/cargo-llvm-cov,
@@ -195,7 +194,7 @@ repos:
         pass_filenames: false
         files: ^(Makefile|scripts/(release-[a-z-]+\.(sh|py)|test_release_contract\.py))$
         stages: [pre-commit, manual]
-=======
+
   # Supply-chain/secret scanners (OWASP A01/A03/A04/A08 -- see
   # docs/TEMPLATE.md's "Checks"). Revs are tags, not SHAs: Renovate's
   # pre-commit manager bumps tags directly, and a SHA + "# frozen: vX"
@@ -235,4 +234,3 @@ repos:
         stages: [manual]
         always_run: false
         files: (^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lock|uv\.lock|poetry\.lock|pdm\.lock|Pipfile\.lock|pylock\.toml|Cargo\.lock|requirements[^/]*\.txt)$
->>>>>>> /tmp/template-new/.pre-commit-config.yaml
