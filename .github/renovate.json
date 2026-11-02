@@ -81,6 +81,14 @@
       ]
     },
     {
+      "description": "Container images the Makefile pins by tag and digest (SYFT_IMAGE). The tag is currentValue and the sha256 is currentDigest, so Renovate bumps both.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": [
+        "# renovate: datasource=docker depName=(?<depName>\\S+?)\\s*\\n[A-Z0-9_]+_IMAGE\\s*:?=\\s*[^:\\s]+(?:/[^:\\s]+)*:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ]
+    },
+    {
       "description": "Cargo.toml's rust-version is the toolchain's major.minor.",
       "customType": "regex",
       "managerFilePatterns": ["/^Cargo\\.toml$/"],

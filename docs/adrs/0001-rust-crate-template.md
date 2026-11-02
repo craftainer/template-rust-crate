@@ -58,7 +58,8 @@ from it. It contains:
   `scripts/release-publish.sh`, copying what `crates-io-auth-action` does:
   GitHub OIDC token for audience `crates.io`, `POST
   https://crates.io/api/v1/trusted_publishing/tokens` for a 30-minute
-  token, `cargo publish` with it, then `DELETE` on the same endpoint to
+  token, `cargo publish --no-verify` with it (verification builds dependency
+  code, so it happens earlier, in `build`, without credentials), then `DELETE` on the same endpoint to
   revoke it. A first release therefore needs a short-lived, crate-scoped
   token; the owner then registers the trusted publisher on crates.io and
   deletes the token;
