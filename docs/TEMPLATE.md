@@ -623,7 +623,7 @@ additions.
   and restores them, then runs `cargo package --locked` and copies the
   `.crate` into `dist/`. That command verifies by building the unpacked
   crate, which runs dependency `build.rs` scripts and proc-macros, so it runs
-  under `scripts/release-scrub-env.sh`, which removes every `GITHUB_*`,
+  under `scripts/release-stamped.sh --scrub` (`scrubbed` in `release-lib.sh`), which removes every `GITHUB_*`,
   `ACTIONS_*` and `RUNNER_*` variable and the registry tokens (the build job
   holds `GITHUB_TOKEN` with `contents`/`packages: write` and the Actions
   runtime token, which the build does not need). `make sbom` runs Syft over the unpacked crate

@@ -33,6 +33,8 @@ endpoint="$url/api/v1/trusted_publishing/tokens"
 dry=${RELEASE_DRY_RUN:-}
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/release-lib.sh
+source scripts/release-lib.sh
 name=$(python3 -I scripts/crate_info.py name)
 version=$(python3 -I scripts/crate_info.py version)
 package_args=()
@@ -77,7 +79,7 @@ esac
 #  - --no-verify: cargo's verify step builds the unpacked crate, which runs
 #    dependency build.rs scripts and proc-macros, and this step holds the
 #    registry token or the OIDC request variables. The crate was verify-built
-#    without credentials in `make build` (release-scrub-env.sh), so nothing
+#    without credentials in `make build` (release-stamped.sh --scrub), so nothing
 #    here compiles dependency code.
 #  - the re-package is compared with dist/<crate>-<version>.crate (the file
 #    that was verify-built, tested, SBOM'd and attached to the release); see
@@ -110,7 +112,7 @@ check_repackage() {
         echo "publish: $built is missing; cannot compare the re-packaged crate with the verified one" >&2
         return 0
     fi
-    scripts/release-scrub-env.sh cargo package --locked --allow-dirty --no-verify \
+    scrubbed cargo package --locked --allow-dirty --no-verify \
         ${package_args[@]+"${package_args[@]}"} >/dev/null 2>&1
     again="$(python3 -I scripts/crate_info.py target-dir)/package/$name-$version.crate"
     sum_built=$(sha256sum "$built" | cut -d' ' -f1)

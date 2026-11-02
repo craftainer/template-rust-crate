@@ -34,7 +34,7 @@ release-arches:
 # (release-stamped.sh), so the checkout stays clean. The runner's rustup
 # honours rust-toolchain.toml, installing the pinned toolchain first.
 # Verifying builds dependency build.rs scripts and proc-macros, so it runs
-# under release-scrub-env.sh: release.yml's build job holds GITHUB_TOKEN
+# under `release-stamped.sh --scrub`: release.yml's build job holds GITHUB_TOKEN
 # (contents/packages: write) and the Actions runtime token, which dependency
 # code must not see.
 build:
@@ -42,7 +42,7 @@ build:
 	@if command -v rustup >/dev/null 2>&1; then rustup toolchain install --profile minimal --no-self-update; fi
 	rm -rf dist
 	mkdir -p dist
-	scripts/release-scrub-env.sh scripts/release-stamped.sh cargo package --locked --allow-dirty $(if $(CARGO_PACKAGE),-p $(CARGO_PACKAGE))
+	scripts/release-stamped.sh --scrub cargo package --locked --allow-dirty $(if $(CARGO_PACKAGE),-p $(CARGO_PACKAGE))
 	@set -e; target=$$($(CRATE_INFO) target-dir); \
 	cp "$$target/package/$(CRATE)-$(VERSION).crate" "$(ASSET).crate"
 

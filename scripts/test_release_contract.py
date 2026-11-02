@@ -248,10 +248,10 @@ class CredentialIsolation(unittest.TestCase):
         result = make("-n", "build", RELEASE_VERSION="1.2.3")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(
-            "scripts/release-scrub-env.sh scripts/release-stamped.sh cargo package --locked", result.stdout
+            "scripts/release-stamped.sh --scrub cargo package --locked", result.stdout
         )
 
-    def test_scrub_env_drops_credentials_and_keeps_the_rest(self) -> None:
+    def test_scrub_drops_credentials_and_keeps_the_rest(self) -> None:
         secrets = {
             "GITHUB_TOKEN": "a",
             "ACTIONS_RUNTIME_TOKEN": "b",
@@ -260,12 +260,14 @@ class CredentialIsolation(unittest.TestCase):
             "CARGO_REGISTRY_TOKEN": "e",
             "NPM_TOKEN": "f",
         }
-        env = {**os.environ, **secrets, "KEEP_ME": "yes", "CARGO_HOME": "/x/cargo"}
+        env = {k: v for k, v in os.environ.items() if k != "RELEASE_VERSION"}
+        env.update(secrets, KEEP_ME="yes", CARGO_HOME="/x/cargo")
         result = subprocess.run(  # noqa: S603
-            [str(ROOT / "scripts" / "release-scrub-env.sh"), "env"],
+            [str(ROOT / "scripts" / "release-stamped.sh"), "--scrub", "env"],
             capture_output=True,
             text=True,
             env=env,
+            cwd=ROOT,
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)

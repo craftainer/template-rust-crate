@@ -1,6 +1,7 @@
 # shellcheck shell=bash
-# Shared by release-check.sh (the local crate) and release-verify-published.sh
-# (the published release); sourced, not run.
+# Shared by release-check.sh (the local crate), release-verify-published.sh
+# (the published release), release-publish.sh and release-stamped.sh --scrub;
+# sourced, not run.
 
 # <dir> <crate name> <dependency spec>: a binary crate that links the
 # dependency, built with cargo (the caller sets CARGO_TARGET_DIR).
@@ -22,4 +23,23 @@ TOML
     printf '// Throwaway: proves the dependency resolves and links.\nuse %s as _;\n\nfn main() {}\n' \
         "$module" >"$dir/src/main.rs"
     cargo build --quiet --manifest-path "$dir/Cargo.toml"
+}
+
+# scrubbed <command> [args...]: runs the command with the CI credentials
+# removed from its environment: every GITHUB_*, ACTIONS_*, RUNNER_*, GH_* and
+# INPUT_* variable (GITHUB_TOKEN, ACTIONS_RUNTIME_TOKEN,
+# ACTIONS_ID_TOKEN_REQUEST_*, ...) plus the registry tokens
+# (CARGO_REGISTRY_TOKEN, CARGO_REGISTRIES_*), NODE_AUTH_TOKEN and NPM_TOKEN.
+# For commands that compile dependency code (`cargo package` verifies by
+# building, which runs dependency build.rs scripts and proc-macros) in a job
+# that holds credentials the build does not need.
+scrubbed() {
+    local name unset_args=()
+    while IFS= read -r name; do
+        if [[ $name =~ ^(GITHUB_|ACTIONS_|RUNNER_|GH_|INPUT_|CARGO_REGISTRY_|CARGO_REGISTRIES_) ||
+            $name == NODE_AUTH_TOKEN || $name == NPM_TOKEN ]]; then
+            unset_args+=(-u "$name")
+        fi
+    done < <(compgen -e)
+    env ${unset_args[@]+"${unset_args[@]}"} "$@"
 }

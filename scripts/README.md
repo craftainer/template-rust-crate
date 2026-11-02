@@ -35,7 +35,7 @@
   `release-lib.sh` holds the `probe` helper both use; `release-publish.sh` (`make
   publish-packages`) runs `cargo publish --no-verify` (nothing builds dependency code while it holds
   credentials) with a bootstrap token or crates.io trusted publishing, after comparing the re-packaged crate with `dist/`'s;
-  `release-scrub-env.sh` runs a command without the CI credentials in its environment (`make build`'s `cargo package`),
+  `release-stamped.sh --scrub` runs its command without the CI credentials in its environment (`make build`'s `cargo package`),
   `release-stamped.sh` runs a command with `RELEASE_VERSION` stamped into
   `Cargo.toml`/`Cargo.lock` (restored afterwards) using
   `release-stamp-version.py`. It runs `cargo fetch --locked` first, because
