@@ -28,15 +28,18 @@ TOML
 # scrubbed <command> [args...]: runs the command with the CI credentials
 # removed from its environment: every GITHUB_*, ACTIONS_*, RUNNER_*, GH_* and
 # INPUT_* variable (GITHUB_TOKEN, ACTIONS_RUNTIME_TOKEN,
-# ACTIONS_ID_TOKEN_REQUEST_*, ...) plus the registry tokens
-# (CARGO_REGISTRY_TOKEN, CARGO_REGISTRIES_*), NODE_AUTH_TOKEN and NPM_TOKEN.
+# ACTIONS_ID_TOKEN_REQUEST_*, ...), every OCI_* variable (the image registry
+# login the build job holds), the cargo registry tokens (CARGO_REGISTRY_TOKEN,
+# CARGO_REGISTRIES_<name>_TOKEN), NODE_AUTH_TOKEN and NPM_TOKEN. Cargo's
+# non-secret registry settings (CARGO_REGISTRIES_<name>_INDEX, ...) stay.
 # For commands that compile dependency code (`cargo package` verifies by
 # building, which runs dependency build.rs scripts and proc-macros) in a job
 # that holds credentials the build does not need.
 scrubbed() {
     local name unset_args=()
     while IFS= read -r name; do
-        if [[ $name =~ ^(GITHUB_|ACTIONS_|RUNNER_|GH_|INPUT_|CARGO_REGISTRY_|CARGO_REGISTRIES_) ||
+        if [[ $name =~ ^(GITHUB_|ACTIONS_|RUNNER_|GH_|INPUT_|OCI_) ||
+            $name == CARGO_REGISTRY_TOKEN || $name =~ ^CARGO_REGISTRIES_.*_TOKEN$ ||
             $name == NODE_AUTH_TOKEN || $name == NPM_TOKEN ]]; then
             unset_args+=(-u "$name")
         fi

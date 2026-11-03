@@ -100,7 +100,7 @@ publish() {
     fi
 }
 
-# Packages the tree again (no build, no credentials, no network) and compares
+# Packages the tree again (no build, no credentials) and compares
 # the result with dist/'s .crate. A difference means the upload would not be
 # the artifact that was checked, so it is reported loudly. It is a warning, not
 # a failure, until a real release has shown the two are byte-identical in CI
@@ -113,8 +113,13 @@ check_repackage() {
         return 0
     fi
     scrubbed cargo package --locked --allow-dirty --no-verify \
-        ${package_args[@]+"${package_args[@]}"} >/dev/null 2>&1
+        ${package_args[@]+"${package_args[@]}"} >/dev/null
     again="$(python3 -I scripts/crate_info.py target-dir)/package/$name-$version.crate"
+    if [[ ! -f $again ]]; then
+        echo "publish: the re-packaged crate is not at $again; cannot compare it with $built" >&2
+        [[ -z ${RELEASE_REPACKAGE_STRICT:-} ]] || exit 1
+        return 0
+    fi
     sum_built=$(sha256sum "$built" | cut -d' ' -f1)
     sum_again=$(sha256sum "$again" | cut -d' ' -f1)
     if [[ $sum_built == "$sum_again" ]]; then

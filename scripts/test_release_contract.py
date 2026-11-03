@@ -259,9 +259,17 @@ class CredentialIsolation(unittest.TestCase):
             "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "d",
             "CARGO_REGISTRY_TOKEN": "e",
             "NPM_TOKEN": "f",
+            "OCI_REGISTRY_PASSWORD": "g",
+            "OCI_REGISTRY_USERNAME": "h",
+            "CARGO_REGISTRIES_PRIVATE_TOKEN": "i",
         }
         env = {k: v for k, v in os.environ.items() if k != "RELEASE_VERSION"}
-        env.update(secrets, KEEP_ME="yes", CARGO_HOME="/x/cargo")
+        env.update(
+            secrets,
+            KEEP_ME="yes",
+            CARGO_HOME="/x/cargo",
+            CARGO_REGISTRIES_PRIVATE_INDEX="sparse+https://x/",
+        )
         result = subprocess.run(  # noqa: S603
             [str(ROOT / "scripts" / "release-stamped.sh"), "--scrub", "env"],
             capture_output=True,
@@ -276,6 +284,7 @@ class CredentialIsolation(unittest.TestCase):
             self.assertFalse(any(line.startswith(f"{name}=") for line in lines), name)
         self.assertIn("KEEP_ME=yes", lines)
         self.assertIn("CARGO_HOME=/x/cargo", lines)
+        self.assertIn("CARGO_REGISTRIES_PRIVATE_INDEX=sparse+https://x/", lines)
 
     def test_publish_never_verifies_and_hides_the_oidc_request_variables(self) -> None:
         text = (ROOT / "scripts" / "release-publish.sh").read_text()
