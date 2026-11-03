@@ -621,7 +621,12 @@ additions.
   `RELEASE_VERSION` into `Cargo.toml` (both `[package]` and
   `[workspace.package]`) and `Cargo.lock` for the duration of the command
   and restores them, then runs `cargo package --locked` and copies the
-  `.crate` into `dist/`. `make sbom` runs Syft over the unpacked crate
+  `.crate` into `dist/`. That command verifies by building the unpacked
+  crate, which runs dependency `build.rs` scripts and proc-macros, so it runs
+  under `scripts/release-stamped.sh --scrub` (`scrubbed` in `release-lib.sh`), which removes every `GITHUB_*`,
+  `ACTIONS_*` and `RUNNER_*` variable and the registry tokens (the build job
+  holds `GITHUB_TOKEN` with `contents`/`packages: write` and the Actions
+  runtime token, which the build does not need). `make sbom` runs Syft over the unpacked crate
   (SPDX JSON). `make publish` is a no-op (image-only, per arch).
   `make publish-packages` (once, after every arch leg, in its own job)
   skips with a `::warning::` unless `CARGO_PUBLISH` is non-empty; with it, it authenticates with the bootstrap `CARGO_REGISTRY_TOKEN` if
@@ -658,10 +663,21 @@ additions.
   in the devcontainer: the runner's `rustup` installs the pinned toolchain from
   `rust-toolchain.toml` (`rustup toolchain install`), and `docker` runs Syft.
   `publish-packages` has a checkout and the downloaded `dist/` only. Cargo
-  cannot upload a prebuilt `.crate`, so it stamps the version again and runs
-  `cargo publish` from the checkout; `release-publish.sh` uses `dist/`'s
-  `.crate` to tell whether the version is already on crates.io with the same
-  contents.
+  cannot upload a prebuilt `.crate` (`cargo publish` always packages the
+  working tree itself), so it stamps the version again and runs
+  `cargo publish --locked --allow-dirty --no-verify` from the checkout.
+  `--no-verify` is what keeps dependency code away from the credentials: the
+  verify step builds the crate and every dependency, and this step holds
+  `CARGO_REGISTRY_TOKEN` or the OIDC request variables (which are also
+  removed from cargo's environment). The crate was verify-built, with no
+  credentials, in `build`. Because cargo re-packages, `release-publish.sh`
+  packages the tree once more without credentials (`--no-verify`, no build)
+  and compares it with `dist/`'s `.crate` (the file that was verify-built,
+  tested, SBOM'd and attached to the release); a difference is a
+  `::warning::`, or a failure with `RELEASE_REPACKAGE_STRICT=1`. It is a
+  warning until a real release has shown the two are byte-identical in CI.
+  `release-publish.sh` also uses `dist/`'s `.crate` to tell whether the
+  version is already on crates.io with the same contents.
 - **Syncing an existing crate instance** (from a template older than 1.1.0,
   which published from `publish` and so needed base 1.9.0's contract). The
   `Makefile` and `scripts/release-*.sh` are replace tier, so one sync brings

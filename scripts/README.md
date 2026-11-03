@@ -33,7 +33,9 @@
   `[patch]`, source replacement and rustflags cannot apply) with the
   channel read from `rust-toolchain.toml` and passed as `RUSTUP_TOOLCHAIN`;
   `release-lib.sh` holds the `probe` helper both use; `release-publish.sh` (`make
-  publish-packages`) runs `cargo publish` with a bootstrap token or crates.io trusted publishing,
+  publish-packages`) runs `cargo publish --no-verify` (nothing builds dependency code while it holds
+  credentials) with a bootstrap token or crates.io trusted publishing, after comparing the re-packaged crate with `dist/`'s;
+  `release-stamped.sh --scrub` runs its command without the CI credentials in its environment (`make build`'s `cargo package`),
   `release-stamped.sh` runs a command with `RELEASE_VERSION` stamped into
   `Cargo.toml`/`Cargo.lock` (restored afterwards) using
   `release-stamp-version.py`. It runs `cargo fetch --locked` first, because
@@ -51,6 +53,9 @@
   ARG in `../.devcontainer/Dockerfile`) and checksum-verified where the upstream project
   publishes checksums, matching the pattern each install step here already
   follows.
+- Run anything that compiles dependency code (`cargo package`'s verify, `cargo build`)
+  without registry or OIDC credentials in its environment; publish with
+  `--no-verify`.
 
 ## Don't
 
