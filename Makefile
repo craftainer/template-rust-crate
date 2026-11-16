@@ -24,7 +24,7 @@ REQUIRE_CRATE = $(if $(and $(CRATE),$(VERSION)),,$(error scripts/crate_info.py c
 
 # Pinned by tag and digest; Renovate bumps both (.github/renovate.json).
 # renovate: datasource=docker depName=anchore/syft
-SYFT_IMAGE := anchore/syft:v1.52.0@sha256:500e2d872ac019436926e8322b4fc1f39441d94d21f6f4046c6ff29b30e8cb02
+SYFT_IMAGE := anchore/syft:v1.57.1@sha256:03215d0e98b661d0ecbc8575dbc14d65be1743b5de5df6410aecb7e80f95b060
 
 release-arches:
 	@echo '["amd64"]'
